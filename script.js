@@ -1,6 +1,4 @@
-// This frontend calls a server-side proxy at `/api/*` so the API key is never exposed.
-// Deploy the server (server.js) with your `.env` containing `API_KEY` and the frontend
-// will request data from the proxy endpoints.
+// Frontend script that calls the server proxy under /api/*
 const searchBtn = document.getElementById("searchBtn");
 const displayContent = document.getElementById("displayContent");
 const hourlyGrid = document.getElementById("hourlyGrid");
@@ -20,17 +18,8 @@ window.addEventListener("load",()=>{
                 console.log(lon)
                 getWeatherByLocation(lat,lon)
                 getWeatherByHour(lat,lon)
-             
-                
-
             }
         )
-        
-        
-
-
-    }else{
-
     }
 })
 
@@ -46,19 +35,14 @@ async function getWeatherByCity(city){
   const url = `/api/weather?city=${encodeURIComponent(city)}`;
   getWeather(url);
 }
-
 async function getWeatherByLocation(lat,lon){
-  const url = `/api/weather?lat=${lat}&lon=${lon}`;
-  getWeather(url);
+    const url = `/api/weather?lat=${lat}&lon=${lon}`;
+    getWeather(url);
 }
-
 async function getWeatherByHour(lat,lon){
-  const url = `/api/forecast?lat=${lat}&lon=${lon}`;
-  getWeather(url);
+    const url = `/api/forecast?lat=${lat}&lon=${lon}`;
+    getWeather(url);
 }
-
-    
-
 
 async function  getWeather(url){
     try{
@@ -68,7 +52,7 @@ async function  getWeather(url){
         else{
             const data =await response.json();
             console.log(data)
-        
+            hourlyGrid.innerHTML = '';
             if (data.list) {
                 displayHourlyForecast(data)
                 displayDailyForecast(data)
@@ -77,11 +61,10 @@ async function  getWeather(url){
             }
         }
     }catch(error){
-
+        console.error(error)
     }
-    
-   
 }
+
 
 
 // current forecast
@@ -165,7 +148,3 @@ function displayHourlyForecast(data) {
     `;
   });
 }
-
-
-
-
