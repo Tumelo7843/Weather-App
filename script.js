@@ -1,4 +1,9 @@
 // Frontend script that calls the server proxy under /api/*
+// If `window.BACKEND_URL` is set (e.g. when hosting frontend on GitHub Pages),
+// requests will go to `${BACKEND_URL}/api/...`. Otherwise they use relative `/api/...`.
+const BACKEND_BASE = (window.BACKEND_URL || '').replace(/\/$/, '');
+function buildApiPath(path) { return BACKEND_BASE ? `${BACKEND_BASE}${path}` : path; }
+
 const searchBtn = document.getElementById("searchBtn");
 const displayContent = document.getElementById("displayContent");
 const hourlyGrid = document.getElementById("hourlyGrid");
@@ -32,15 +37,15 @@ searchBtn.addEventListener("click", () => {
   }
 });
 async function getWeatherByCity(city){
-  const url = `/api/weather?city=${encodeURIComponent(city)}`;
+  const url = buildApiPath(`/api/weather?city=${encodeURIComponent(city)}`);
   getWeather(url);
 }
 async function getWeatherByLocation(lat,lon){
-    const url = `/api/weather?lat=${lat}&lon=${lon}`;
+    const url = buildApiPath(`/api/weather?lat=${lat}&lon=${lon}`);
     getWeather(url);
 }
 async function getWeatherByHour(lat,lon){
-    const url = `/api/forecast?lat=${lat}&lon=${lon}`;
+    const url = buildApiPath(`/api/forecast?lat=${lat}&lon=${lon}`);
     getWeather(url);
 }
 
