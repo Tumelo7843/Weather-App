@@ -1,173 +1,238 @@
+// 🔐 ADD YOUR API KEY HERE
+// import apikey from env file in server.js, so we keep it hidden from client-side code
 
-if (!apiKey) {
-  console.warn('No API key in client. Requests will fail. Use a server proxy or ask me to create one.');
-}
+const apiKey = "";
+
 const searchBtn = document.getElementById("searchBtn");
 const displayContent = document.getElementById("displayContent");
 const hourlyGrid = document.getElementById("hourlyGrid");
 const dailyList = document.getElementById("dailyList");
-const now = new Date();
-const hours = now.getHours();
- const minutes = now.getMinutes();
-const seconds = now.getSeconds();
-window.addEventListener("load",()=>{
-    if (navigator.geolocation){
-        console.log(navigator.geolocation)
-        navigator.geolocation.getCurrentPosition(
-            position =>{
-                const lat =position.coords.latitude
-                const lon = position.coords.longitude
-                console.log(lat)
-                console.log(lon)
-                getWeatherByLocation(lat,lon)
-                getWeatherByHour(lat,lon)
-             
-                
 
-            }
-        )
-        
-        
+// ================================
+// AUTO LOAD WEATHER USING LOCATION
+// ================================
+window.addEventListener("load", function () {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        getWeatherData(lat, lon);
+      },
+      function () {
+        alert("Location access denied. Please search manually.");
+      }
+    );
+  }
+});
 
-
-    }else{
-
-    }
-})
-
-searchBtn.addEventListener("click", () => {
+// ================================
+// SEARCH BY CITY
+// ================================
+searchBtn.addEventListener("click", function () {
   const city = document.getElementById("cityInput").value.trim();
-  if (city) {
+  if (city !== "") {
     getWeatherByCity(city);
   } else {
     alert("Please enter a city name.");
   }
 });
-async function getWeatherByCity(city){
-const url=`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
- getWeather(url)   
 
+async function getWeatherByCity(city) {
+  try {
+    // First get coordinates from city name
+    const geoUrl =
+      "https://api.openweathermap.org/geo/1.0/direct?q=" +
+      city +
+      "&limit=1&appid=" +
+      apiKey;
 
-}
-async function getWeatherByLocation(lat,lon){
-    const url=`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`
-    getWeather(url)
-    
-}
-async function getWeatherByHour(lat,lon){
-    const url=`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`
-    getWeather(url)
-}
+    const geoResponse = await fetch(geoUrl);
+    const geoData = await geoResponse.json();
 
-    
-
-
-async function  getWeather(url){
-    try{
-        const response = await fetch(url)
-        if(!response.ok)
-            console.log(error)
-        else{
-            const data =await response.json();
-            console.log(data)
-        
-            if (data.list) {
-                displayHourlyForecast(data)
-                displayDailyForecast(data)
-            } else {
-                displayWeather(data)
-            }
-        }
-    }catch(error){
-
+    if (geoData.length === 0) {
+      alert("City not found.");
+      return;
     }
-    
-   
+
+    const lat = geoData[0].lat;
+    const lon = geoData[0].lon;
+
+    getWeatherData(lat, lon);
+  } catch (error) {
+    console.log("City fetch error:", error);
+  }
 }
 
+// ================================
+// GET CURRENT + FORECAST DATA
+// ================================
+async function getWeatherData(lat, lon) {
+  try {
+    // Current weather
+    const currentUrl =
+      "https://api.openweathermap.org/data/2.5/weather?lat=" +
+      lat +
+      "&lon=" +
+      lon +
+      "&units=metric&appid=" +
+      apiKey;
 
-// current forecast
-function displayWeather(data){
-    const {name }=data;
-    const {icon,description}=data.weather[0]
-    const {deg,speed}= data.wind
-    const {temp,humidity,feels_like}=data.main
-    const {country}=data.sys
-    const {dt_txt} =data.weather[0]
+    const currentResponse = await fetch(currentUrl);
+    const currentData = await currentResponse.json();
 
-    displayContent.innerHTML=`
-    <div class="current">  
-    <div>
-    <h3>${name}</h3>
-    <p>${hours}:${minutes}</p>
-    <p>${description}</p>
-    </div>
-    <div class="now">
-    <h2><img src="https://openweathermap.org/img/wn/${icon}.png" alt="" style=""> ${temp}</h2>
-    </div>
+    // Forecast (3-hour intervals for 5 days)
+    const forecastUrl =
+      "https://api.openweathermap.org/data/2.5/forecast?lat=" +
+      lat +
+      "&lon=" +
+      lon +
+      "&units=metric&appid=" +
+      apiKey;
 
-    <div>
-    <p>feels like: ${feels_like}</p>
-    <p>wind: ${speed} mph</p>
-    <p>humidity: ${humidity}</p>
-    <p></p>
-    </div>
-    </div>
-    <br><br>
-    `
+    const forecastResponse = await fetch(forecastUrl);
+    const forecastData = await forecastResponse.json();
+
+    displayCurrentWeather(currentData);
+    displayHourlyForecast(forecastData);
+    displayDailyForecast(forecastData);
+  } catch (error) {
+    console.log("Weather fetch error:", error);
+  }
 }
+
+// ================================
+// DISPLAY CURRENT WEATHER
+// ================================
+function displayCurrentWeather(data) {
+  const name = data.name;
+  const country = data.sys.country;
+  const description = data.weather[0].description;
+  const icon = data.weather[0].icon;
+  const temp = data.main.temp;
+  const feels = data.main.feels_like;
+  const humidity = data.main.humidity;
+  const wind = data.wind.speed;
+
+  displayContent.innerHTML =
+    '<div class="current">' +
+    "<div>" +
+    "<h2>" +
+    name +
+    ", " +
+    country +
+    "</h2>" +
+    "<p>" +
+    description +
+    "</p>" +
+    "<p>Feels like: " +
+    feels +
+    "°C</p>" +
+    "<p>Humidity: " +
+    humidity +
+    "%</p>" +
+    "<p>Wind: " +
+    wind +
+    " m/s</p>" +
+    "</div>" +
+    "<div>" +
+    '<img src="https://openweathermap.org/img/wn/' +
+    icon +
+    '@2x.png">' +
+    "<h2>" +
+    temp.toFixed(1) +
+    "°C</h2>" +
+    "</div>" +
+    "</div>";
+}
+
+// ================================
+// DISPLAY NEXT 5 HOURS
+// ================================
 function displayHourlyForecast(data) {
- 
-  data.list.slice(0, 5).forEach((item) => {
-    const { icon, description } = item.weather[0];
-    const { temp } = item.main;
+  hourlyGrid.innerHTML = ""; // clear old data
+
+  const nextFive = data.list.slice(0, 5);
+
+  for (let i = 0; i < nextFive.length; i++) {
+    const item = nextFive[i];
     const time = new Date(item.dt * 1000).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    hourlyGrid.innerHTML += `
-      <div class="hourly">
-        <p>${time}</p>
-        <img src="https://openweathermap.org/img/wn/${icon}.png" alt="${description}">
-        <p>${temp.toFixed(1)}°C</p>
-      </div>
-    `;
-  });
+    const icon = item.weather[0].icon;
+    const temp = item.main.temp;
 
-  
+    hourlyGrid.innerHTML +=
+      '<div class="hourly">' +
+      "<p>" +
+      time +
+      "</p>" +
+      '<img src="https://openweathermap.org/img/wn/' +
+      icon +
+      '.png">' +
+      "<p>" +
+      temp.toFixed(1) +
+      "°C</p>" +
+      "</div>";
+  }
 }
- function displayDailyForecast(data) {
+
+// ================================
+// DISPLAY NEXT 5 DAYS
+// ================================
+function displayDailyForecast(data) {
   dailyList.innerHTML = "";
-  const dailyData = [];
 
-  // Group by day
-  data.list.forEach((item) => {
+  const groupedDays = {};
+
+  // Group forecasts by day
+  for (let i = 0; i < data.list.length; i++) {
+    const item = data.list[i];
     const date = new Date(item.dt * 1000).toLocaleDateString();
-    if (!dailyData[date]) dailyData[date] = [];
-    dailyData[date].push(item);
-  });
 
-  const days = Object.keys(dailyData).slice(0, 7);
-  days.forEach((day) => {
-    const temps = dailyData[day].map((i) => i.main.temp);
-    const minTemp = Math.min(...temps);
-    const maxTemp = Math.max(...temps);
-    const icon = dailyData[day][0].weather[0].icon;
-    const desc = dailyData[day][0].weather[0].description;
+    if (!groupedDays[date]) {
+      groupedDays[date] = [];
+    }
 
-    dailyList.innerHTML += `
-      <div class="daily">
-        <span>${new Date(day).toLocaleDateString("en", {
-          weekday: "short",
-        })}</span>
-        <img src="https://openweathermap.org/img/wn/${icon}.png" alt="${desc}">
-        <span>${minTemp.toFixed(1)}°C<input type="range" id="temperature" name="temperature" min=" ${minTemp.toFixed(1)}" max="${maxTemp}">${maxTemp}°C</span>
-      </div>
-    `;
-  });
+    groupedDays[date].push(item);
+  }
+
+  const days = Object.keys(groupedDays).slice(0, 5);
+
+  for (let j = 0; j < days.length; j++) {
+    const day = days[j];
+    const dayData = groupedDays[day];
+
+    let minTemp = dayData[0].main.temp;
+    let maxTemp = dayData[0].main.temp;
+
+    for (let k = 0; k < dayData.length; k++) {
+      const temp = dayData[k].main.temp;
+      if (temp < minTemp) minTemp = temp;
+      if (temp > maxTemp) maxTemp = temp;
+    }
+
+    const icon = dayData[0].weather[0].icon;
+    const weekday = new Date(day).toLocaleDateString("en-US", {
+      weekday: "short",
+    });
+
+    dailyList.innerHTML +=
+      '<div class="daily">' +
+      "<span>" +
+      weekday +
+      "</span>" +
+      '<img src="https://openweathermap.org/img/wn/' +
+      icon +
+      '.png">' +
+      "<span>Min: " +
+      minTemp.toFixed(1) +
+      "°C</span>" +
+      "<span>Max: " +
+      maxTemp.toFixed(1) +
+      "°C</span>" +
+      "</div>";
+  }
 }
-
-
-
-
