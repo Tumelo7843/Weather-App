@@ -1,21 +1,27 @@
-require("dotenv").config();
 const express = require("express");
 const fetch = require("node-fetch");
+const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-const apiKey = process.env.API_KEY;
+// Serve frontend files
+app.use(express.static(path.join(__dirname, "public")));
 
-// Route for weather
+const API_KEY = process.env.API_KEY;
+
+// Get weather by city
 app.get("/weather", async (req, res) => {
-  const city = req.query.city;
-
   try {
+    const city = req.query.city;
+
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
+      `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}`
     );
 
     const data = await response.json();
@@ -25,6 +31,7 @@ app.get("/weather", async (req, res) => {
   }
 });
 
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log(`Server running on port ${PORT}`);
 });
